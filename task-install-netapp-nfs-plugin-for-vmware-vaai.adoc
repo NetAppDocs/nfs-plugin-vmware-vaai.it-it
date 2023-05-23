@@ -1,0 +1,478 @@
+---
+permalink: task-install-netapp-nfs-plugin-for-vmware-vaai.html 
+sidebar: sidebar 
+keywords: install, netapp, nfs, plug-in, vmware, vaai, involve, enable, netapp, vstorage, api, array, integration, installation, download, nfsv4.1 
+summary: 'L"installazione del plug-in NFS implica l"abilitazione di VMware vStorage per NFS sul sistema di storage NetApp, la verifica dell"abilitazione di VAAI (VMware vStorage API per l"integrazione degli array) sull"host VMware, il download e l"installazione del plug-in sull"host VMware ESXi e la verifica della riuscita dell"installazione.' 
+---
+= Installare il plug-in NetApp NFS per VMware VAAI
+:allow-uri-read: 
+:icons: font
+:imagesdir: ./media/
+
+
+[role="lead"]
+L'installazione del plug-in NFS implica l'abilitazione di VMware vStorage per NFS sul sistema di storage NetApp, la verifica dell'abilitazione di VAAI (VMware vStorage API per l'integrazione degli array) sull'host VMware, il download e l'installazione del plug-in sull'host VMware ESXi e la verifica della riuscita dell'installazione.
+
+.Prima di iniziare
+* NFSv3 o NFSv4.1 devono essere abilitati sul sistema storage.
++
+
+NOTE: NFSv4.1 è disponibile solo sui sistemi ONTAP 9.0 e NFSv3 è disponibile sui sistemi 7-Mode e Cluster-Mode.
+
+* VMware vSphere 7.0U1 deve essere disponibile.
+
+
+Per ulteriori informazioni sull'attivazione di NFS e sull'utilizzo di VMware vSphere, consultare i manuali elencati in <<step10,Fase 10>>.
+
+.A proposito di questa attività
+* Se si utilizza VMware ESXi CLI per installare il plug-in, iniziare con <<step1,Fase 1>>.
+* Se si utilizza Virtual Storage Console per VMware vSphere (VSC) per installare il plug-in, iniziare con <<step3,Fase 3>>.
++
+VSC abilita VMware vStorage per NFS sul controller di storage e abilita VAAI sull'host ESXi, che sono fasi <<step1,1>> attraverso <<step2,2>> di questa procedura.
+
+* Se si utilizzano gli strumenti ONTAP per VMware vSphere per installare il plug-in, iniziare con <<step3,Fase 3>>.
+
+
+*Convenzioni utilizzate per gli indirizzi IP:*
+
+* Gli indirizzi IP del modulo 192.168.42.2xx si riferiscono alle porte VMkernel del server ESXi.
+* Gli indirizzi IP del modulo 192.168.42.6x si riferiscono ai sistemi che eseguono Data ONTAP in 7-Mode.
+* Gli indirizzi IP del modulo 192.168.42.8x si riferiscono alle macchine virtuali di storage (SVM, precedentemente note come Vserver) sui sistemi ONTAP.
+
+
+.Fasi
+. [[step1]]abilitare VMware vStorage per NFS:
++
+[cols="30,60"]
+|===
+| Se si utilizza... | Quindi... 
+
+
+ a| 
+CLI ONTAP
+ a| 
+Abilitare VMware vStorage per NFS su SVM:
+`vserver nfs modify –vserver vserver_name -vstorage enabled`
+`<vserver_name>` È il nome della SVM.
+
+
+
+ a| 
+CLI 7-Mode
+ a| 
+Abilitare VMware vStorage per NFS sul sistema storage:
+`options nfs.vstorage.enable on`
+
+
+
+ a| 
+CLI 7-Mode per le unità vFiler
+ a| 
+Abilitare l'installazione del plug-in NetApp NFS vStorage per NFS sull'unità vFiler di MultiStore che ospita gli archivi dati VMware NFS:
+`vfiler run vfiler_name options nfs.vstorage.enable on`
+
+|===
+. [[step2]]verificare che VAAI sia abilitato su ciascun host ESXi.
++
+In VMware vSphere 5.0 e versioni successive, VAAI è attivato per impostazione predefinita.
+
++
+[cols="30,60"]
+|===
+| Se si utilizza... | Quindi... 
+
+
+ a| 
+CLI VMware ESXi
+ a| 
+.. Verificare che VAAI sia attivato:
+`esxcfg-advcfg -g /DataMover/HardwareAcceleratedMove`
+`esxcfg-advcfg -g /DataMover/HardwareAcceleratedInit`
++
+Se VAAI è attivato, questi comandi visualizzano il seguente output:
+
++
+[listing]
+----
+~ #  esxcfg-advcfg -g /DataMover/HardwareAcceleratedMove
+Value of HardwareAcceleratedMove is **1**
+~ # esxcfg-advcfg -g /DataMover/HardwareAcceleratedInit
+Value of HardwareAcceleratedInit is **1**
+----
+.. Se VAAI non è abilitato, abilitare VAAI:
+`esxcfg-advcfg -s 1 /DataMover/HardwareAcceleratedInit`
+`esxcfg-advcfg -s 1 /DataMover/HardwareAcceleratedMove`
++
+Questi comandi visualizzano il seguente output:
+
++
+[listing]
+----
+~ # esxcfg-advcfg -s 1 /DataMover/HardwareAcceleratedInit
+Value of HardwareAcceleratedInit is **1**
+~ #  esxcfg-advcfg -s 1 /DataMover/HardwareAcceleratedMove
+Value of HardwareAcceleratedMove is **1**
+----
+
+
+
+
+ a| 
+Client vSphere
+ a| 
+.. Accedere a vCenter Server.
+.. Per ciascun server ESXi, fare clic sul nome del server.
+.. Nella sezione Software della scheda Configurazione, fare clic su *Impostazioni avanzate*.
+.. Selezionare *DataMover*, quindi verificare che `DataMover.HardwareAcceleratedMove` e. `DataMover.HardwareAcceleratedInit` i parametri sono impostati su 1.
+
+
+|===
+. [[step3]]Scarica il plug-in NetApp NFS per VMware VAAI:
++
+.. Accedere alla pagina Download all'indirizzo https://mysupport.netapp.com/site/products/all/details/nfsplugin-vmware-vaai/downloads-tab["Plug-in NetApp NFS per i download di VMware VAAI"^].
+.. Scarica la versione software più recente per 2.0 e vSphere 7.0U1 e versioni successive.
+
+
+. Verificare il file binario con l'immagine firmata e la chiave pubblica:
++
+.. Scaricare il seguente file zip su `/tmp` cartella:
++
+`NetAppNasPlugin-<version>.Signed.zip`
+
++
+Questo file zip contiene i seguenti file:
+
++
+*** `NetAppNasPlugin-<version>.zip`
+*** `NetAppNasPlugin-<version>.zip.sig`
+*** `csc-prod-CFSG-NFS-Plugin.pem`
+
+
+.. Ottenere la chiave pubblica dalla catena di certificati utilizzando il seguente comando:
++
+`openssl x509 -in csc-prod-CFSG-NFS-Plugin.pem -pubkey -noout > csc-prod-CFSG-NFS-Plugin.pub`
+
++
+*** `csc-prod-CFSG-NFS-Plugin.pem` è la catena di certificati presente in `NetAppNasPlugin-<version>.Signed.zip`
+*** `csc-prod-CFSG-NFS-Plugin.pub` è una chiave pubblica
+
+
+.. Verificare l'immagine firmata con la chiave pubblica:
++
+`openssl dgst -sha256 -verify csc-prod-CFSG-NFS-Plugin.pub -signature /tmp/ NetAppNasPlugin-<version>.zip.sig  /tmp/NetAppNasPlugin-<version>.zip`
+
++
+Se la verifica ha esito positivo, viene visualizzato il seguente output:
+
++
+[listing]
+----
+Verified OK
+----
+
+
+. Installare il plug-in sull'host ESXi eseguendo i seguenti comandi:
++
+`/etc/init.d/vaai-nasd stop`
+
++
+`esxcli software component apply -d   /tmp/<some_path>/NetAppNasPlugin-<version>.zip`
+
++
+`/etc/init.d/vaai-nasd start`
+
++
+** `<some_path>` indica il percorso del file scaricato
+** `NetAppNasPlugin-<version>.zip` è contenuto nel file zip scaricato
+
+
+. Verificare che il plug-in sia stato installato correttamente sull'host nella riga di comando di VMware ESXi:
++
+`esxcli software component list`
+
++
+Il plug-in funziona automaticamente dopo l'installazione e il riavvio.
+
++
+L'utilizzo di questi comandi garantisce che il componente rimanga compatibile con la nuova funzionalità vLCM di vSphere, disponibile a partire da 7.0x e versioni successive.
+
+. Se si installa il plug-in su un nuovo sistema host o se il server che esegue ONTAP è stato appena configurato, creare o modificare le regole dei criteri di esportazione per i volumi root e per ciascun volume datastore NFS sui server ESXi che utilizzano VAAI AT link:task-configure-export-policies-for-clustered-data-ontap-to-allow-vaai-over-nfs.html["Configurare le policy di esportazione per ONTAP per consentire VAAI su NFS"].
++
+Saltare questo passaggio se si utilizza Data ONTAP in modalità 7.
+
++
+È possibile utilizzare i criteri di esportazione per limitare l'accesso ai volumi a client specifici. NFSv4 è richiesto nella policy di esportazione per l'offload delle copie VAAI, pertanto potrebbe essere necessario modificare le regole delle policy di esportazione per i volumi datastore sulle SVM. Se si utilizzano protocolli diversi da NFS su un datastore, verificare che l'impostazione di NFS nella regola di esportazione non rimuova gli altri protocolli.
+
++
+[cols="30,60"]
+|===
+| Se si utilizza... | Quindi... 
+
+
+ a| 
+CLI ONTAP
+ a| 
+Impostare `nfs` Come protocollo di accesso per ogni regola dei criteri di esportazione per i server ESXi che utilizzano VAAI:
+`vserver export-policy rule modify -vserver vs1 -policyname mypolicy -ruleindex 1 -protocol nfs -rwrule krb5|krb5i|any -rorule krb5|krb5i|any`
+
+Nel seguente esempio:
+
+** `vs1` È il nome della SVM.
+** `mypolicy` è il nome del criterio di esportazione.
+** `1` è il numero di indice della regola.
+** `nfs` Include i protocolli NFSv3 e NFSv4.
+** Lo stile di sicurezza per RO (sola lettura) e RW (lettura/scrittura) è krb5, krb5i o qualsiasi.
++
+[listing]
+----
+cluster1::> vserver export-policy rule modify -vserver vs1
+-policyname mypolicy -ruleindex 1 -protocol nfs -rwrule krb5|krb5i|any -rorule krb5|krb5i|any
+----
+
+
+
+
+ a| 
+Gestore di sistema di ONTAP
+ a| 
+.. Dalla scheda Home, fare doppio clic sul cluster appropriato.
+.. Espandere la gerarchia delle macchine virtuali di storage (SVM) nel riquadro di navigazione a sinistra.
++
+
+NOTE: Se si utilizza una versione di System Manager precedente alla 3.1, viene utilizzato il termine Vserver invece di Storage Virtual Machine nella gerarchia.
+
+.. Nel riquadro di navigazione, selezionare la storage virtual machine (SVM) con datastore abilitati VAAI, quindi fare clic su *Policies* > *Export Policies*.
+.. Nella finestra Esporta criteri, espandere il criterio di esportazione, quindi selezionare l'indice della regola.
++
+L'interfaccia utente non specifica che il datastore sia abilitato VAAI.
+
+.. Fare clic su *Modify Rule* (Modifica regola di esportazione) per visualizzare la finestra di dialogo Modify Export Rule (Modifica regola
+.. In *Access Protocols* (protocolli di accesso), selezionare *NFS* per abilitare tutte le versioni di NFS.
+.. Fare clic su *OK*.
+
+
+|===
+. Se si utilizza Data ONTAP in 7-Mode, eseguire `exportfs` comando per l'esportazione dei percorsi dei volumi.
++
+Saltare questo passaggio se si utilizza ONTAP.
+
++
+Per ulteriori informazioni su `exportfs` vedere https://library.netapp.com/ecm/ecm_download_file/ECMP1401220["Guida all'accesso ai file e alla gestione dei protocolli di Data ONTAP 8.2 per 7-Mode"^].
+
++
+Quando si esporta il volume, è possibile specificare un nome host o un indirizzo IP, una subnet o un netgroup. È possibile specificare l'indirizzo IP, la subnet o gli host per entrambi `rw` e. `root` opzioni. Ad esempio:
+
++
+[listing]
+----
+sys1> exportfs -p root=192.168.42.227 /vol/VAAI
+----
++
+È inoltre possibile disporre di un elenco separato da due punti. Ad esempio:
+
++
+[listing]
+----
+sys1> exportfs -p root=192.168.42.227:192.168.42.228 /vol/VAAI
+----
++
+Se si esporta il volume con il flag Actual, il percorso di esportazione dovrebbe avere un singolo componente per il corretto offload delle copie. Ad esempio:
+
++
+[listing]
+----
+sys1> exportfs -p actual=/vol/VAAI,root=192.168.42.227 /VAAI-ALIAS
+----
++
+
+NOTE: L'offload delle copie non funziona per i percorsi di esportazione multicomponente.
+
+. Montare il datastore NFSv3 o NFSv4.1 sull'host ESXi:
++
+.. Per montare il datastore NFSv3, eseguire il seguente comando:
++
+`esxcli storage nfs add -H 192.168.42.80 -s share_name -v volume_name`
+
++
+Per montare il datastore NFSv4.1, eseguire il seguente comando:
+
++
+`esxcli storage nfs41 add -H 192.168.42.80 -s share_name -v volume_name -a AUTH_SYS/SEC_KRB5/SEC_KRB5I`
+
++
+L'esempio seguente mostra il comando da eseguire su ONTAP per il montaggio del datastore e l'output risultante:
+
++
+[listing]
+----
+~ # esxcfg-nas -a onc_src -o 192.168.42.80 -s /onc_src
+Connecting to NAS volume: onc_src
+/onc_src created and connected.
+----
++
+Per i sistemi che eseguono Data ONTAP in modalità 7, il `/vol` Il prefisso precede il nome del volume NFS. L'esempio seguente mostra il comando 7-Mode per il montaggio del datastore e l'output risultante:
+
++
+[listing]
+----
+~ # esxcfg-nas -a vms_7m -o 192.168.42.69 -s /vol/vms_7m
+Connecting to NAS volume: /vol/vms_7m
+/vol/vms_7m created and connected.
+----
+.. Per gestire i montaggi NAS:
++
+`esxcfg-nas -l`
+
++
+Viene visualizzato il seguente output:
+
++
+[listing]
+----
+VMS_vol103 is /VMS_vol103 from 192.168.42.81 mounted available
+VMS_vol104 is VMS_vol104 from 192.168.42.82 mounted available
+dbench1 is /dbench1 from 192.168.42.83 mounted available
+dbench2 is /dbench2 from 192.168.42.84 mounted available
+onc_src is /onc_src from 192.168.42.80 mounted available
+----
+
+
++
+Al termine, il volume viene montato e disponibile nella directory /vmfs/Volumes.
+
+. [[step10]]verificare che il datastore montato supporti VAAI utilizzando uno dei seguenti metodi:
++
+[cols="30,60"]
+|===
+| Se si utilizza... | Quindi... 
+
+
+ a| 
+CLI ESXi
+ a| 
+`vmkfstools -Ph /vmfs/volumes/onc_src/`Viene visualizzato il seguente output:
+
+[listing]
+----
+NFS-1.00 file system spanning 1 partitions.
+File system label (if any):
+onc_src Mode: public Capacity 760 MB, 36.0 MB available,
+file block size 4 KB
+UUID: fb9cccc8-320a99a6-0000-000000000000
+Partitions spanned (on "notDCS"):
+
+nfs:onc_src
+NAS VAAI Supported: YES
+Is Native Snapshot Capable: YES
+~ #
+----
+
+
+ a| 
+Client vSphere
+ a| 
+.. Fare clic su *Server ESXi* > *Configurazione* > *Storage*.
+.. Visualizza la colonna hardware Acceleration per un datastore NFS con VAAI abilitato.
+
+
+|===
++
+Per ulteriori informazioni su VMware vStorage su NFS, consultare quanto segue:
+
++
+http://docs.netapp.com/ontap-9/topic/com.netapp.doc.cdot-famg-nfs/home.html["Panoramica di riferimento di ONTAP 9 NFS"^]
+
++
+https://library.netapp.com/ecm/ecm_download_file/ECMP1401220["Guida all'accesso ai file e alla gestione dei protocolli di Data ONTAP 8.2 per 7-Mode"^]
+
++
+Per ulteriori informazioni sulla configurazione dei volumi e dello spazio nei volumi, vedere quanto segue:
+
++
+http://docs.netapp.com/ontap-9/topic/com.netapp.doc.dot-cm-vsmg/home.html["Panoramica sulla gestione dello storage logico con la CLI"^]
+
++
+link:https://library.netapp.com/ecm/ecm_download_file/ECMP1368859["Guida alla gestione dello storage di Data ONTAP 8.2 per 7-Mode"^]
+
++
+Per ulteriori informazioni su VMware vSphere Lifecycle Manager, che può essere utilizzato anche per installare e gestire i plug-in su più host utilizzando l'interfaccia grafica del client Web di vCenter, vedere quanto segue:
+
++
+link:https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere-lifecycle-manager.doc/GUID-74295A37-E8BB-4EB9-BFBA-47B78F0C570D.html["Informazioni su VMware vSphere Lifecycle Manager"^]
+
++
+Per informazioni sull'utilizzo di VSC per il provisioning degli archivi dati NFS e la creazione di cloni di macchine virtuali nell'ambiente VMware, vedere quanto segue:
+
++
+link:https://library.netapp.com/ecmdocs/ECMLP2561116/html/index.html["Guida all'installazione e all'amministrazione di Virtual Storage Console 6.2.1 per VMware vSphere"^]
+
++
+Per ulteriori informazioni sull'utilizzo dei tool ONTAP per VMware vSphere per il provisioning degli archivi dati NFS e la creazione di cloni di macchine virtuali nell'ambiente VMware, consulta la seguente pagina:
+
++
+link:https://docs.netapp.com/vapp-98/topic/com.netapp.doc.vsc-dsg/home.html["Strumenti ONTAP per la documentazione VMware vSphere"^]
+
++
+Per ulteriori informazioni sull'utilizzo degli archivi dati NFS e sull'esecuzione delle operazioni di cloning, consulta la seguente pagina:
+
++
+link:http://pubs.vmware.com/vsphere-60/topic/com.vmware.ICbase/PDF/vsphere-esxi-vcenter-server-60-storage-guide.pdf["Storage VMware vSphere"^]
+
+. Se si utilizza Data ONTAP in 7-Mode, eseguire `sis on` per attivare il volume datastore per l'offload delle copie e la deduplica.
++
+Per ONTAP, visualizzare i dettagli sull'efficienza di un volume:
+
++
+`volume efficiency show -vserver vserver_name -volume volume_name`
+
++
+
+NOTE: Per i sistemi AFF (AFF), l'efficienza dei volumi è attivata per impostazione predefinita.
+
++
+Se l'output del comando non visualizza alcun volume con l'efficienza dello storage attivata, abilitare l'efficienza:
+
++
+`volume efficiency on -vserver vserver_name -volume volume_name`
+
++
+Saltare questo passaggio se si utilizzano i tool VSC o ONTAP per VMware vSphere per configurare i volumi perché l'efficienza dei volumi è attivata per impostazione predefinita negli archivi dati.
+
++
+[listing]
+----
+sys1> volume efficiency show
+This table is currently empty.
+
+sys1> volume efficiency on -volume  testvol1
+Efficiency for volume "testvol1" of Vserver "vs1" is enabled.
+
+sys1> volume efficiency show
+Vserver    Volume           State    Status       Progress           Policy
+---------- ---------------- -------- ------------ ------------------ ----------
+vs1        testvol1         Enabled  Idle         Idle for 00:00:06  -
+----
++
+Per ulteriori informazioni sull'attivazione della deduplica sui volumi datastore, vedere quanto segue:
+
++
+http://docs.netapp.com/ontap-9/topic/com.netapp.doc.dot-cm-vsmg/home.html["Panoramica sulla gestione dello storage logico con la CLI"^]
+
++
+https://library.netapp.com/ecm/ecm_download_file/ECMP1401220["Guida all'accesso ai file e alla gestione dei protocolli di Data ONTAP 8.2 per 7-Mode"^]
+
+
+
+.Al termine
+Utilizza le funzionalità di riserva di spazio e offload delle copie del plug-in NFS per rendere più efficienti le attività di routine:
+
+* Creare macchine virtuali nel formato thick virtual machine disk (VMDK) su volumi tradizionali NetApp o volumi FlexVol e riservare spazio per il file al momento della creazione.
+* Clonare le macchine virtuali esistenti all'interno o tra volumi NetApp:
++
+** Datastore che sono volumi sulla stessa SVM sullo stesso nodo.
+** Datastore che sono volumi sulla stessa SVM su nodi diversi.
+** Datastore che sono volumi sullo stesso sistema 7-Mode o unità vFiler.
+
+
+* Eseguire operazioni di cloning che terminano più velocemente rispetto alle operazioni di cloni non VAAI perché non devono passare attraverso l'host ESXi.
+
